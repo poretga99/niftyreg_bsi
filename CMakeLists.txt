@@ -1,29 +1,14 @@
-project(NiftyReg)
-#-----------------------------------------------------------------------------
-cmake_minimum_required(VERSION 2.8.0)
-if("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" MATCHES "^2\\.8\\.0$")
- mark_as_advanced(FORCE CMAKE_BACKWARDS_COMPATIBILITY)
-else("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" MATCHES "^2\\.8\\.0$")
- mark_as_advanced(CLEAR CMAKE_BACKWARDS_COMPATIBILITY)
-endif("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" MATCHES "^2\\.8\\.0$")
+
+cmake_minimum_required(VERSION 3.18.0)
+project(NiftyReg LANGUAGES C CXX CUDA)
 #-----------------------------------------------------------------------------
 set(NiftyReg_VERSION_MAJOR 1)
 set(NiftyReg_VERSION_MINOR 3)
 set(NiftyReg_VERSION_PATCH 9)
 #-----------------------------------------------------------------------------
-if(COMMAND cmake_policy)
-      cmake_policy(SET CMP0003 NEW)
-endif(COMMAND cmake_policy)
-#-----------------------------------------------------------------------------
-if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    add_definitions(/W1)
-else(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    add_definitions(-fPIC)
-endif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-#-----------------------------------------------------------------------------
-option(BUILD_NR_DEV "To build NiftyReg code under development" ON)
-option(BUILD_TESTING "To build the unit tests" ON)
-option(BUILD_NR_SLICER_EXT "Where NiftyReg meets 3DSlicer" ${NiftyRegExtension_BUILD_SLICER_EXTENSION})
+option(BUILD_NR_DEV "To build NiftyReg code under development" OFF)
+option(BUILD_TESTING "To build the unit tests" OFF)
+option(BUILD_NR_SLICER_EXT "Where NiftyReg meets 3DSlicer" OFF)
 option(BUILD_ALL_DEP "All the dependencies are build" OFF)
 # All dependencies are build to create the 3DSlicer package
 if(BUILD_NR_SLICER_EXT)
@@ -36,8 +21,8 @@ else(BUILD_NR_SLICER_EXT)
     mark_as_advanced(CLEAR BUILD_NR_DEV)
 endif(BUILD_NR_SLICER_EXT)
 
-option(USE_SSE "To enable SEE computation in some case" ON)
-option(USE_CUDA "To enable CUDA for a GPU implementation of the code" OFF)
+option(USE_SSE "To enable SEE computation in some case" OFF)
+option(USE_CUDA "To enable CUDA for a GPU implementation of the code" ON)
 option(USE_DOUBLE "To force double precision instead of single precision" OFF)
 if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     # I removed openmp for Mac OS Lion
@@ -133,15 +118,6 @@ if(BUILD_NR_DEV)
 endif(BUILD_NR_DEV)
 
 if(USE_OPENMP)
-    if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-        if(CMAKE_SYSTEM_VERSION VERSION_GREATER 11.0 OR CMAKE_SYSTEM_VERSION VERSION_EQUAL 11.0.0)
-            message("OpenMP appears to be broken using Mac OS Lion")
-            message(FATAL_ERROR "Please turn USE_OPENMP OFF")
-        endif()
-    endif()
-	
-    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
-
     if(GCC_VERSION VERSION_GREATER 4.2 OR GCC_VERSION VERSION_EQUAL 4.2)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
@@ -155,13 +131,8 @@ endif(USE_OPENMP)
 
 #-----------------------------------------------------------------------------
 if(USE_CUDA)
-    find_package(CUDA)
-    if(CUDA_FOUND)
-        add_definitions(-D_USE_CUDA)
-        message(STATUS "Found CUDA - the GPU code will be compiled.")
-    else(CUDA_FOUND)
-        message(FATAL_ERROR "CUDA not found. Please turn the USE_CUDA flag off.")
-    endif(CUDA_FOUND)
+    find_package(CUDAToolkit REQUIRED)
+    include_directories(${CUDAToolkit_INCLUDE_DIRS})
 endif(USE_CUDA)
 #-----------------------------------------------------------------------------
 if(IS_DIRECTORY ${CMAKE_SOURCE_DIR}/.svn)
@@ -173,89 +144,6 @@ if(IS_DIRECTORY ${CMAKE_SOURCE_DIR}/.svn)
     endif(Subversion_FOUND)
 endif(IS_DIRECTORY ${CMAKE_SOURCE_DIR}/.svn)
 #-----------------------------------------------------------------------------
-subdirs(reg-io)
-subdirs(reg-lib)
-subdirs(reg-apps)
-if(BUILD_TESTING)
-    enable_testing()
-    include(${CMAKE_ROOT}/Modules/Dart.cmake)
-    subdirs(reg-test)
-endif(BUILD_TESTING)
-#-----------------------------------------------------------------------------
-# add a target to generate API documentation with Doxygen
-find_package(Doxygen)
-if(Doxygen_FOUND)
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
-    add_custom_target(doc
-        ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMENT "Generating API documentation with Doxygen" VERBATIM
-    )
-endif(Doxygen_FOUND)
-#-----------------------------------------------------------------------------
-# The package is only build if 3DSlicer package is not build as well
-if(NOT BUILD_NR_SLICER_EXT)
-    # Set some variable about the package
-    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_NAME}: Tools for efficient medical image registration.")
-    set(CPACK_PACKAGE_VENDOR "Marc Modat (UCL)")
-    set(CPACK_PACKAGE_VERSION_MAJOR "${NiftyReg_VERSION_MAJOR}")
-    set(CPACK_PACKAGE_VERSION_MINOR "${NiftyReg_VERSION_MINOR}")
-    set(CPACK_PACKAGE_VERSION_PATCH "${NiftyReg_VERSION_PATCH}")
-    set(CPACK_PACKAGE_INSTALL_DIRECTORY "CMake ${CMake_VERSION_MAJOR}.${CMake_VERSION_MINOR}")
-
-    # Check if the system processor is defined
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "unknown")
-      SET (CMAKE_SYSTEM_PROCESSOR "x86")
-    endif(CMAKE_SYSTEM_PROCESSOR MATCHES "unknown")
-    if(NOT DEFINED CPACK_SYSTEM_NAME)
-      set(CPACK_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_BUILD_TYPE})
-    endif(NOT DEFINED CPACK_SYSTEM_NAME)
-
-    if(WIN32 AND NOT UNIX)
-      # Set some variable for a windows-based package
-      if(CMAKE_CL_64)
-        set(CPACK_SYSTEM_NAME Win64-${CMAKE_SYSTEM_PROCESSOR})
-      else(CMAKE_CL_64)
-        set(CPACK_SYSTEM_NAME Win32-${CMAKE_SYSTEM_PROCESSOR})
-      endif(CMAKE_CL_64)
-      set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}\\\\README.txt")
-      set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}\\\\LICENSE.txt")
-    #  set(CPACK_PACKAGE_ICON "${CMake_SOURCE_DIR}/logo\\\\nifty_reg_logo_128.png")
-      set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\\\${PROJECT_NAME}.exe")
-      set(CPACK_NSIS_DISPLAY_NAME "${CPACK_PACKAGE_INSTALL_DIRECTORY} ${PROJECT_NAME}")
-      set(CPACK_NSIS_HELP_LINK "https:\\\\\\\\sourceforge.net/projects/niftyreg/")
-      set(CPACK_NSIS_URL_INFO_ABOUT "https:\\\\\\\\sourceforge.net/projects/niftyreg/")
-      set(CPACK_NSIS_CONTACT "m.modat@ucl.ac.uk")
-      set(CPACK_NSIS_MODIFY_PATH ON)
-    else(WIN32 AND NOT UNIX)
-      # Set some variables for a unix-based package
-      set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.txt")
-      set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
-    #  set(CPACK_PACKAGE_ICON "${CMake_SOURCE_DIR}/logo/nifty_reg_logo_128.png")
-      set(CPACK_HELP_LINK "https:/sourceforge.net/projects/niftyreg/")
-      set(CPACK_URL_INFO_ABOUT "https:/sourceforge.net/projects/niftyreg/")
-      set(CPACK_STRIP_FILES "bin/${PROJECT_NAME}")
-      set(CPACK_SOURCE_STRIP_FILES OFF)
-      set(CPACK_PACKAGE_CONTACT "m.modat@ucl.ac.uk")
-      if(APPLE)
-        # MacOs specific variables
-#        set(CPACK_PACKAGING_INSTALL_PREFIX "usr")
-        set(CPACK_POSTFLIGHT_SCRIPT ${CMAKE_SOURCE_DIR}/${PROJECT_NAME}SetEnvUnix.sh)
-        if(${CPACK_SYSTEM_NAME} MATCHES Darwin AND CMAKE_OSX_ARCHITECTURES)
-          list(LENGTH CMAKE_OSX_ARCHITECTURES _length)
-          if(_length GREATER 1)
-            set(CPACK_SYSTEM_NAME Darwin-Universal-${CMAKE_BUILD_TYPE})
-          else(_length GREATER 1)
-            set(CPACK_SYSTEM_NAME Darwin-${CMAKE_OSX_ARCHITECTURES}-${CMAKE_BUILD_TYPE})
-          endif(_length GREATER 1)
-        endif(${CPACK_SYSTEM_NAME} MATCHES Darwin AND CMAKE_OSX_ARCHITECTURES)
-        set(CPACK_GENERATOR "PackageMaker")
-        set(CMAKE_STRIP "${CMAKE_STRIP} -x")
-      else(APPLE)
-        # Debian based variable
-        set(CPACK_GENERATOR "TGZ")
-      endif(APPLE)
-    endif(WIN32 AND NOT UNIX)
-    include(CPack)
-endif(NOT BUILD_NR_SLICER_EXT)
-#=============================================================================
+add_subdirectory(reg-io)
+add_subdirectory(reg-lib)
+add_subdirectory(reg-apps)

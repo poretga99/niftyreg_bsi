@@ -45,7 +45,7 @@ if(USE_CUDA)
     set(LIST ${LIST} _reg_resampling)
     set(LIST ${LIST} _reg_tools)
     foreach(NAME ${LIST})
-        cuda_add_library(${NAME}_gpu ${NAME}_gpu.h ${NAME}_gpu.cu ${NAME}_kernels.cu)
+        add_library(${NAME}_gpu ${NAME}_gpu.h ${NAME}_gpu.cu ${NAME}_kernels.cu)
         install(TARGETS ${NAME}_gpu
                 RUNTIME DESTINATION bin COMPONENT Development
                 LIBRARY DESTINATION lib COMPONENT Development
@@ -55,7 +55,7 @@ if(USE_CUDA)
     endforeach(NAME)
 #-----------------------------------------------------------------------------
     set(NAME _reg_cudaCommon)
-    cuda_add_library(${NAME} ${NAME}.h ${NAME}.cu)
+    add_library(${NAME} ${NAME}.h ${NAME}.cu)
     install(TARGETS ${NAME}
             RUNTIME DESTINATION bin COMPONENT Development
             LIBRARY DESTINATION lib COMPONENT Development
@@ -73,9 +73,9 @@ set(NAME _reg_f3d)
 if(USE_CUDA)
 #-----------------------------------------------------------------------------
     if(WIN32)
-        cuda_add_library(${NAME} ${NAME}.h ${NAME}.cpp ${NAME}_sym.h ${NAME}_sym.cpp ${NAME}2.h ${NAME}2.cpp ${NAME}_gpu.h ${NAME}_gpu.cpp)
+        add_library(${NAME} ${NAME}.h ${NAME}.cpp ${NAME}_sym.h ${NAME}_sym.cpp ${NAME}2.h ${NAME}2.cpp ${NAME}_gpu.h ${NAME}_gpu.cpp)
     else(WIN32)
-        cuda_add_library(${NAME} SHARED ${NAME}.h ${NAME}.cpp ${NAME}_sym.h ${NAME}_sym.cpp ${NAME}2.h ${NAME}2.cpp ${NAME}_gpu.h ${NAME}_gpu.cpp)
+        add_library(${NAME} SHARED ${NAME}.h ${NAME}.cpp ${NAME}_sym.h ${NAME}_sym.cpp ${NAME}2.h ${NAME}2.cpp ${NAME}_gpu.h ${NAME}_gpu.cpp)
     endif(WIN32)
     target_link_libraries(${NAME} _reg_localTransformation _reg_resampling _reg_globalTransformation _reg_KLdivergence _reg_ssd _reg_mutualinformation _reg_tools _reg_ReadWriteImage _reg_localTransformation_gpu _reg_resampling_gpu _reg_globalTransformation_gpu _reg_mutualinformation_gpu _reg_tools_gpu _reg_cudaCommon)
     install(FILES ${NAME}_gpu.h ${NAME}_gpu.cpp DESTINATION include COMPONENT Development)
