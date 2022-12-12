@@ -407,13 +407,13 @@ __global__ void reg_bspline_getDeformationField0(float4 *positionField)
 }
 /* *************************************************************** */
 /* ******************************* Thread per Tile with Linear Interpolation ******************************** */
-__global__ void reg_bspline_getDeformationField(float4 *positionField, float4 *controlPoint)
+__global__ void reg_bspline_getDeformationField(float4 *positionField, float4 *controlPoint, int numImages)
 {
     int3 controlPointImageDim = c_ControlPointImageDim;
     int3 tilesDim = c_tilesDim;
 
     int3 nodeAnte;
-    nodeAnte.z = blockIdx.z * blockDim.z + threadIdx.z;
+    nodeAnte.z = (blockIdx.z % numImages) * blockDim.z + threadIdx.z;
     nodeAnte.y = blockIdx.y * blockDim.y + threadIdx.y;
     nodeAnte.x = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -641,7 +641,7 @@ __global__ void reg_bspline_getDeformationField(float4 *positionField, float4 *c
                     imgCoord.y = nodeAnte.y*gridVoxelSpacing.y+j;
                     imgCoord.x = nodeAnte.x*gridVoxelSpacing.x+i;
                     unsigned int tmp_index = imgCoord.z*imageSize.x*imageSize.y + imgCoord.y*imageSize.x + imgCoord.x;
-                    if (imgCoord.z < imageSize.z && imgCoord.y < imageSize.y && imgCoord.x < imageSize.x)
+                    if (imgCoord.z < imageSize.z && imgCoord.y < imageSize.y && imgCoord.x < imageSize.x && blockIdx.z < numImages)
                         positionField[tmp_index] = displacement;
 
                 }

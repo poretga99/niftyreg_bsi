@@ -1,29 +1,30 @@
 /*
   NrrdIO: stand-alone code for basic nrrd functionality
+  Copyright (C) 2013, 2012, 2011, 2010, 2009  University of Chicago
   Copyright (C) 2008, 2007, 2006, 2005  Gordon Kindlmann
   Copyright (C) 2004, 2003, 2002, 2001, 2000, 1999, 1998  University of Utah
- 
+
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any
   damages arising from the use of this software.
- 
+
   Permission is granted to anyone to use this software for any
   purpose, including commercial applications, and to alter it and
   redistribute it freely, subject to the following restrictions:
- 
+
   1. The origin of this software must not be misrepresented; you must
      not claim that you wrote the original software. If you use this
      software in a product, an acknowledgment in the product
      documentation would be appreciated but is not required.
- 
+
   2. Altered source versions must be plainly marked as such, and must
      not be misrepresented as being the original software.
- 
+
   3. This notice may not be removed or altered from any source distribution.
 */
 
 #include "NrrdIO.h"
-#include "teem32bit.h"
+#include "privateAir.h"
 /* timer functions */
 #ifdef _WIN32
 #include <io.h>
@@ -35,16 +36,34 @@
 
 /*
 ******** airTeemVersion
+******** airTeemReleaseDone
 ******** airTeemReleaseDate
 **
-** updated with each release to contain a string representation of 
+** updated with each release to contain a string representation of
 ** the Teem version number and release date.  Originated in version 1.5;
 ** use of TEEM_VERSION #defines started in 1.9
 */
 const char *
 airTeemVersion = TEEM_VERSION_STRING;
+const int
+airTeemReleaseDone = AIR_FALSE;
 const char *
-airTeemReleaseDate = "late 2009 or early 2010";
+airTeemReleaseDate = "2014, with luck";
+
+/*
+******** airTeemVersionSprint
+**
+** uniform way of printing information about the Teem version
+*/
+void
+airTeemVersionSprint(char buff[AIR_STRLEN_LARGE]) {
+  sprintf(buff, "Teem version %s, %s%s%s",
+          airTeemVersion,
+          airTeemReleaseDone ? "released on " : "",
+          airTeemReleaseDate,
+          airTeemReleaseDone ? "" : " (not yet released)");
+  return;
+}
 
 double
 _airSanityHelper(double val) {
@@ -69,7 +88,7 @@ airNull(void) {
 */
 void *
 airSetNull(void **ptrP) {
-  
+
   if (ptrP) {
     *ptrP = NULL;
   }
@@ -95,7 +114,7 @@ airFree(void *ptr) {
 ******** airFopen()
 **
 ** encapsulates that idea that "-" is either standard in or stardard
-** out, and does McRosopht stuff required to make piping work 
+** out, and does McRosopht stuff required to make piping work
 **
 ** Does not error checking.  If fopen fails, then C' errno and strerror are
 ** left untouched for the caller to access.
@@ -106,7 +125,7 @@ airFopen(const char *name, FILE *std, const char *mode) {
 
   if (!strcmp(name, "-")) {
     ret = std;
-#ifdef _MSC_VER
+#ifdef _WIN32
     if (strchr(mode, 'b')) {
       _setmode(_fileno(ret), _O_BINARY);
     }
@@ -116,7 +135,6 @@ airFopen(const char *name, FILE *std, const char *mode) {
   }
   return ret;
 }
-
 
 /*
 ******** airFclose()
@@ -152,7 +170,7 @@ airFclose(FILE *file) {
 ** To get fprintf behavior, pass "str" as NULL
 ** to get sprintf bahavior, pass "file" as NULL
 **
-** Someday I'll find/write a complete {f|s|}printf replacement ...
+** Finding a complete {f|s|}printf replacement is a priority for Teem 2.0
 */
 int
 airSinglePrintf(FILE *file, char *str, const char *_fmt, ...) {
@@ -161,7 +179,7 @@ airSinglePrintf(FILE *file, char *str, const char *_fmt, ...) {
   int ret, isF, isD, cls;
   char *conv=NULL, *p0, *p1, *p2, *p3, *p4, *p5;
   va_list ap;
-  
+
   va_start(ap, _fmt);
   fmt = airStrdup(_fmt);
 
@@ -174,9 +192,9 @@ airSinglePrintf(FILE *file, char *str, const char *_fmt, ...) {
   p5 = strstr(fmt, "%lg");
   isF = p0 || p1 || p2;
   isD = p3 || p4 || p5;
-  /* the code here says "isF" and "isD" as if it means "is float" or 
-     "is double".  It really should be "is2" or "is3", as in, 
-     "is 2-character conversion sequence, or "is 3-character..." */
+  /* the code here says "isF" and "isD" as if it means "is float" or
+     "is double".  It really should be "is2" or "is3", as in,
+     "is 2-character conv. seq., or "is 3-character conv. seq." */
   if (isF) {
     conv = p0 ? p0 : (p1 ? p1 : p2);
   }
@@ -238,15 +256,64 @@ airSinglePrintf(FILE *file, char *str, const char *_fmt, ...) {
     /* conversion sequence is neither for float nor double */
     ret = file ? vfprintf(file, fmt, ap) : vsprintf(str, fmt, ap);
   }
-  
+
   va_end(ap);
   free(fmt);
   return ret;
 }
 
-#if TEEM_32BIT == 1
-const int airMy32Bit = 1;
-#else
-const int airMy32Bit = 0;
-#endif
+/*
+******** airSprintSize_t
+**
+** sprints a single size_t to a given string, side-stepping
+** non-standardized format specifier confusion with printf
+*/
+char *
+airSprintSize_t(char _str[AIR_STRLEN_SMALL], size_t val) {
+  char str[AIR_STRLEN_SMALL];
+  unsigned int si;
+
+  if (!_str) {
+    return NULL;
+  }
+  si = AIR_STRLEN_SMALL-1;
+  str[si] = '\0';
+  do {
+    str[--si] = AIR_CAST(char, (val % 10) + '0');
+    val /= 10;
+  } while (val);
+  strcpy(_str, str + si);
+  return _str;
+}
+
+/*
+******** airSprintPtrdiff_t
+**
+** sprints a single ptrdiff_t to a given string, side-stepping
+** non-standardized format specifier confusion with printf
+*/
+char *
+airSprintPtrdiff_t(char _str[AIR_STRLEN_SMALL], ptrdiff_t val) {
+  char str[AIR_STRLEN_SMALL];
+  unsigned int si;
+  int sign;
+
+  if (!_str) {
+    return NULL;
+  }
+  si = AIR_STRLEN_SMALL-1;
+  str[si] = '\0';
+  sign = (val < 0 ? -1 : 1);
+  do {
+    ptrdiff_t dig;
+    dig = val % 10;
+    str[--si] = AIR_CAST(char, dig > 0 ? dig + '0' : -dig + '0');
+    val /= 10;
+  } while (val);
+  if (-1 == sign) {
+    str[--si] = '-';
+  }
+  strcpy(_str, str + si);
+  return _str;
+}
 

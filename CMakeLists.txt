@@ -133,6 +133,7 @@ endif(USE_OPENMP)
 if(USE_CUDA)
     find_package(CUDAToolkit REQUIRED)
     include_directories(${CUDAToolkit_INCLUDE_DIRS})
+    add_compile_definitions("USE_CUDA" "_USE_CUDA")
 endif(USE_CUDA)
 #-----------------------------------------------------------------------------
 if(IS_DIRECTORY ${CMAKE_SOURCE_DIR}/.svn)

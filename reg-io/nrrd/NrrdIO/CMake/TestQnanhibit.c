@@ -1,22 +1,34 @@
-/*=========================================================================
- *
- *  Copyright Insight Software Consortium
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *         http://www.apache.org/licenses/LICENSE-2.0.txt
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- *=========================================================================*/
+/*
+  Teem: Tools to process and visualize scientific data and images
+  Copyright (C) 2009--2019  University of Chicago
+  Copyright (C) 2008, 2007, 2006, 2005  Gordon Kindlmann
+  Copyright (C) 2004, 2003, 2002, 2001, 2000, 1999, 1998  University of Utah
+
+  This library is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public License
+  (LGPL) as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+  The terms of redistributing and/or modifying this software also
+  include exceptions to the LGPL that facilitate static linking.
+
+  This library is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public License
+  along with this library; if not, write to Free Software Foundation, Inc.,
+  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
 #include <stdio.h>
 #include <float.h>
+
+#if defined(__BORLANDC__)
+# include <math.h>
+# include <float.h>
+#endif
+
 
 int
 main(int argc, char *argv[])
@@ -27,6 +39,11 @@ main(int argc, char *argv[])
      float flt32bit;
      int   int32bit;
    } qnan;
+
+#if defined(__BORLANDC__)
+   // Disable floating point exceptions in Borland
+   _control87(MCW_EM, MCW_EM);
+#endif // defined(__BORLANDC__)
 
    if (sizeof(float) != sizeof(int))
      {

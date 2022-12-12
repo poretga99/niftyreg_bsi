@@ -34,6 +34,7 @@
 #define BLOCK_BS_X 4
 #define BLOCK_BS_Y 4
 #define BLOCK_BS_Z 4
+#define NUM_IMS 50
 #define BLOCK_SIZE 64  // BLOCK_BS_X*BLOCK_BS_Y*BLOCK_BS_Z
 #define NUM_C 4                                 //Number of control points that affect a voxel in the 3 axes
 //Distance in pixels for control points ! it may be different in different dimensions !!! The spacing could be different

@@ -145,7 +145,7 @@ void reg_bspline_gpu(nifti_image *controlPointImage,
     dim3 B2(BLOCK_BS_X,BLOCK_BS_Y,BLOCK_BS_Z);
     dim3 G2((unsigned int) ceilf((float)(tilesDim.x) / B2.x),
             (unsigned int) ceilf((float)(tilesDim.y) / B2.y),
-            (unsigned int) ceilf((float)(tilesDim.z) / B2.z));
+            (unsigned int) ceilf((float)(tilesDim.z * NUM_IMS) / B2.z));
 #endif
 
 #if IDR == 1
@@ -159,7 +159,7 @@ void reg_bspline_gpu(nifti_image *controlPointImage,
     reg_bspline_getDeformationField0<<< G0, B0 >>>(*positionFieldImageArray_d);
 #endif
 #if IDR == 2
-    reg_bspline_getDeformationField<<<G2, B2 >>>(*positionFieldImageArray_d, *controlPointImageArray_d);
+    reg_bspline_getDeformationField<<<G2, B2 >>>(*positionFieldImageArray_d, *controlPointImageArray_d, NUM_IMS);
 #endif
 
     cudaThreadSynchronize();
